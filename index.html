@@ -314,13 +314,24 @@
       });
     }
 
-    const notifBtn = document.getElementById('enableNotifBtn');
+        const notifBtn = document.getElementById('enableNotifBtn');
+
+    function checkNotificationStatus() {
+      if (!("Notification" in window)) return;
+      if (Notification.permission === "granted") {
+        notifBtn.textContent = "التنبيه والاهتزاز شغال ✅";
+        notifBtn.style.backgroundColor = "var(--accent-green)";
+      } else if (Notification.permission === "denied") {
+        notifBtn.textContent = "الإشعارات محظورة ❌";
+        notifBtn.style.backgroundColor = "var(--accent-orange)";
+      }
+    }
+
     notifBtn.addEventListener('click', () => {
       if (!("Notification" in window)) return alert("متصفحك لا يدعم الإشعارات.");
       Notification.requestPermission().then(perm => {
         if (perm === "granted") {
-          notifBtn.textContent = "التنبيه والاهتزاز شغال ✅";
-          notifBtn.style.backgroundColor = "var(--accent-green)";
+          checkNotificationStatus();
           if ("vibrate" in navigator) navigator.vibrate([150, 80, 150]);
           new Notification("تم تفعيل روتين اليوم!", {
             body: "ستصلك الإشعارات بالاهتزاز في مواعيد الجدول بالضبط.",
@@ -329,6 +340,9 @@
         }
       });
     });
+
+    checkNotificationStatus();
+
 
     let lastSentMinute = "";
     setInterval(() => {
