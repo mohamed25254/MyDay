@@ -1,84 +1,17 @@
-export default {
-  async fetch(request) {
-    const url = new URL(request.url);
-
-    // 1. Service Worker File
-    if (url.pathname === "/sw.js") {
-      const swCode = `
-        const CACHE_NAME = 'routine-cache-v1';
-        self.addEventListener('install', (e) => {
-          self.skipWaiting();
-        });
-        self.addEventListener('activate', (e) => {
-          e.waitUntil(clients.claim());
-        });
-        self.addEventListener('fetch', (e) => {
-          e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-        });
-      `;
-      return new Response(swCode, {
-        headers: { "content-type": "application/javascript;charset=utf-8" },
-      });
-    }
-
-    // 2. Web App Manifest
-    if (url.pathname === "/manifest.json") {
-      const manifest = {
-        name: "نظام إدارة اليوم والقوام",
-        short_name: "روتين اليوم",
-        start_url: "/",
-        display: "standalone",
-        background_color: "#0f172a",
-        theme_color: "#0f172a",
-        orientation: "portrait",
-        icons: [
-          {
-            src: "/icon.svg",
-            sizes: "192x192 512x512",
-            type: "image/svg+xml",
-            purpose: "any maskable",
-          },
-        ],
-      };
-      return new Response(JSON.stringify(manifest), {
-        headers: { "content-type": "application/json;charset=utf-8" },
-      });
-    }
-
-    // 3. App Icon (SVG)
-    if (url.pathname === "/icon.svg") {
-      const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-          <rect width="512" height="512" rx="100" fill="#0f172a"/>
-          <circle cx="256" cy="256" r="180" fill="#1e293b" stroke="#38bdf8" stroke-width="20"/>
-          <path d="M256 140 V256 L330 300" stroke="#38bdf8" stroke-width="24" stroke-linecap="round"/>
-        </svg>
-      `;
-      return new Response(svg, {
-        headers: { "content-type": "image/svg+xml" },
-      });
-    }
-
-    // 4. Main HTML Page
-    return new Response(HTML_CONTENT, {
-      headers: { "content-type": "text/html;charset=utf-8" },
-    });
-  },
-};
-
-const HTML_CONTENT = `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>نظام اليوم والقوام</title>
+  <title>روتين اليوم والقوام</title>
   
   <meta name="theme-color" content="#0f172a">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  
+  <!-- يتم توليد الـ Manifest والأيقونة برمجياً لضمان التثبيت -->
+  <link rel="manifest" id="dynamic-manifest">
+  <link rel="icon" href="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230f172a'/%3E%3Ccircle cx='256' cy='256' r='180' fill='%231e293b' stroke='%2338bdf8' stroke-width='20'/%3E%3Cpath d='M256 140 V256 L330 300' stroke='%2338bdf8' stroke-width='24' stroke-linecap='round'/%3E%3C/svg%3E">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -86,78 +19,37 @@ const HTML_CONTENT = `<!DOCTYPE html>
 
   <style>
     :root {
-      --bg-dark: #0f172a;
-      --card-bg: #1e293b;
-      --card-border: #334155;
-      --primary: #38bdf8;
-      --accent-green: #34d399;
-      --accent-orange: #fb923c;
-      --accent-purple: #c084fc;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
+      --bg-dark: #0f172a; --card-bg: #1e293b; --card-border: #334155;
+      --primary: #38bdf8; --accent-green: #34d399; --accent-orange: #fb923c;
+      --accent-purple: #c084fc; --text-main: #f8fafc; --text-muted: #94a3b8;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
     body { background-color: var(--bg-dark); color: var(--text-main); padding: 15px; line-height: 1.5; }
     .container { max-width: 800px; margin: 0 auto; }
-
     header { text-align: center; margin-bottom: 20px; }
     header h1 { font-size: 1.6rem; font-weight: 800; color: var(--primary); }
-
-    .status-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 15px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
+    .status-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
     .selector-group { display: flex; gap: 10px; }
-    .selector-btn {
-      flex: 1; padding: 10px; border: 1px solid var(--card-border); background: #0f172a;
-      color: var(--text-muted); border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem;
-    }
+    .selector-btn { flex: 1; padding: 10px; border: 1px solid var(--card-border); background: #0f172a; color: var(--text-muted); border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
     .selector-btn.active { background: var(--primary); color: #0f172a; border-color: var(--primary); }
-
-    .wednesday-badge {
-      background: rgba(251, 146, 60, 0.15); border: 1px solid var(--accent-orange); color: var(--accent-orange);
-      padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; display: none;
-    }
-
-    .notif-box {
-      background: #172554; border: 1px solid var(--primary); border-radius: 10px; padding: 12px 15px;
-      display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;
-    }
+    .wednesday-badge { background: rgba(251, 146, 60, 0.15); border: 1px solid var(--accent-orange); color: var(--accent-orange); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; display: none; }
+    .notif-box { background: #172554; border: 1px solid var(--primary); border-radius: 10px; padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
     .btn-action { background-color: var(--primary); color: #0f172a; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 700; cursor: pointer; }
-
     .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
-    .tab-btn {
-      background-color: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted);
-      padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; text-align: center;
-    }
+    .tab-btn { background-color: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted); padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; text-align: center; }
     .tab-btn.active { background-color: var(--primary); color: #0f172a; border-color: var(--primary); }
-
     .content-panel { display: none; }
     .content-panel.active { display: block; }
-
     .timeline { display: flex; flex-direction: column; gap: 10px; }
-    .item-card {
-      background-color: var(--card-bg); border: 1px solid var(--card-border); border-right: 4px solid var(--primary);
-      border-radius: 8px; padding: 12px 15px; display: flex; flex-direction: column; gap: 3px;
-    }
+    .item-card { background-color: var(--card-bg); border: 1px solid var(--card-border); border-right: 4px solid var(--primary); border-radius: 8px; padding: 12px 15px; display: flex; flex-direction: column; gap: 3px; }
     .item-card.study { border-right-color: var(--primary); }
     .item-card.exercise { border-right-color: var(--accent-orange); }
     .item-card.food { border-right-color: var(--accent-green); }
     .item-card.sleep { border-right-color: var(--accent-purple); }
-
     .item-header { display: flex; justify-content: space-between; align-items: center; }
     .item-title { font-weight: 700; font-size: 0.95rem; }
     .item-time { font-size: 0.8rem; font-weight: 700; color: var(--primary); background: rgba(56, 189, 248, 0.1); padding: 2px 6px; border-radius: 4px; }
     .item-desc { font-size: 0.85rem; color: var(--text-muted); }
-
     .custom-table { width: 100%; border-collapse: collapse; background-color: var(--card-bg); border-radius: 8px; overflow: hidden; border: 1px solid var(--card-border); }
     .custom-table th, .custom-table td { padding: 10px; text-align: right; font-size: 0.85rem; border-bottom: 1px solid var(--card-border); }
     .custom-table th { background-color: #172554; color: var(--primary); font-weight: 700; }
@@ -166,9 +58,7 @@ const HTML_CONTENT = `<!DOCTYPE html>
 <body>
 
   <div class="container">
-    <header>
-      <h1>نظام إدارة اليوم الذكي</h1>
-    </header>
+    <header><h1>نظام إدارة اليوم الذكي</h1></header>
 
     <div class="status-card">
       <span style="font-size:0.9rem; font-weight:700;">هل عندك مدرسة النهاردة؟</span>
@@ -176,9 +66,7 @@ const HTML_CONTENT = `<!DOCTYPE html>
         <button class="selector-btn" id="btnModeSchool" onclick="setDayMode('school')">🎒 عندي مدرسة</button>
         <button class="selector-btn" id="btnModeHome" onclick="setDayMode('home')">🏠 إجازة / في البيت</button>
       </div>
-      <div id="wednesdayNotice" class="wednesday-badge">
-        ⚠️ نظام استثناء الأربعاء مفعّل تلقائياً (درس إنجليزي الحصري 5:00 م - وإلغاء المذاكرة المسائية).
-      </div>
+      <div id="wednesdayNotice" class="wednesday-badge">⚠️ نظام استثناء الأربعاء مفعّل تلقائياً (درس إنجليزي الحصري 5:00 م).</div>
     </div>
 
     <div class="notif-box">
@@ -187,71 +75,71 @@ const HTML_CONTENT = `<!DOCTYPE html>
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab(event, 'tab-schedule')">جدول اليوم الحالي</button>
+      <button class="tab-btn active" onclick="switchTab(event, 'tab-schedule')">جدول اليوم</button>
       <button class="tab-btn" onclick="switchTab(event, 'tab-exercises')">التمارين</button>
       <button class="tab-btn" onclick="switchTab(event, 'tab-diet')">الأكل المخصص</button>
     </div>
 
-    <div id="tab-schedule" class="content-panel active">
-      <div class="timeline" id="scheduleTimeline"></div>
-    </div>
+    <div id="tab-schedule" class="content-panel active"><div class="timeline" id="scheduleTimeline"></div></div>
 
     <div id="tab-exercises" class="content-panel">
       <table class="custom-table">
-        <thead>
-          <tr><th>التمرين</th><th>الفائدة والمشكلة</th><th>المجموعات والعدات</th></tr>
-        </thead>
+        <thead><tr><th>التمرين</th><th>الفائدة والمشكلة</th><th>المجموعات والعدات</th></tr></thead>
         <tbody>
-          <tr><td><strong>Doorway Stretch</strong></td><td>فتح الصدر وعلاج دوران الكتف</td><td>3 جولات × 30 ثانية ثبات</td></tr>
-          <tr><td><strong>Wall Angels</strong></td><td>فرد تقوس أعلى الظهر (الأتب)</td><td>3 جولات × 10 - 12 عدة ملاصق للجدار</td></tr>
-          <tr><td><strong>Prone Y-to-W</strong></td><td>علاج تجنح لوح الكتف</td><td>3 جولات × 10 عدات (سحب W لثانيتين)</td></tr>
-          <tr><td><strong>Chin Tucks</strong></td><td>علاج بروز الرقبة للأمام</td><td>مجموعتان × 10 عدات (سحب للخلف 5 ثوانٍ)</td></tr>
-          <tr><td><strong>Kneeling Hip Flexor</strong></td><td>فك شد الحوض لعلاج بروز المؤخرة</td><td>3 جولات × 30 ثانية لكل رجل</td></tr>
-          <tr><td><strong>Glute Bridges</strong></td><td>تقوية عضلات الحوض الخلفية</td><td>3 جولات × 12 عدة مع عصر المقعدة</td></tr>
-          <tr><td><strong>تعليق عقلة</strong></td><td>فك ضغط الفقرات وتمديد القامة</td><td>مرتان × 30 - 45 ثانية تعلق كامل</td></tr>
+          <tr><td><strong>Doorway Stretch</strong></td><td>فتح الصدر وعلاج دوران الكتف</td><td>3 جولات × 30 ثانية</td></tr>
+          <tr><td><strong>Wall Angels</strong></td><td>فرد تقوس أعلى الظهر (الأتب)</td><td>3 جولات × 12 عدة</td></tr>
+          <tr><td><strong>Prone Y-to-W</strong></td><td>علاج تجنح لوح الكتف</td><td>3 جولات × 10 عدات</td></tr>
+          <tr><td><strong>Chin Tucks</strong></td><td>علاج بروز الرقبة للأمام</td><td>مجموعتان × 10 عدات</td></tr>
+          <tr><td><strong>Kneeling Hip Flexor</strong></td><td>فك شد الحوض (المؤخرة)</td><td>3 جولات × 30 ثانية لكل رجل</td></tr>
+          <tr><td><strong>Glute Bridges</strong></td><td>تقوية عضلات الحوض الخلفية</td><td>3 جولات × 12 عدة</td></tr>
+          <tr><td><strong>تعليق عقلة</strong></td><td>فك ضغط الفقرات وتمديد القامة</td><td>مرتان × 45 ثانية</td></tr>
         </tbody>
       </table>
     </div>
 
     <div id="tab-diet" class="content-panel">
       <div class="timeline">
-        <div class="item-card food">
-          <div class="item-header"><span class="item-title">وجبة 1: الإفطار الأساسي</span></div>
-          <p class="item-desc">طبق كبير أرز مصري بالسمن + طبيخ خضار بالشوربة (بدون شطة أو فلفل) + 3 بيضات مقلية بسمن بلدي أو بروتين متاح.</p>
-        </div>
-        <div class="item-card food">
-          <div class="item-header"><span class="item-title">وجبة 2: سناك الظهر عالي السعرات</span></div>
-          <p class="item-desc">حبتان بطاطا حلوة مهروسة بالسمن البلدي والعسل الأسود والسمسم، أو طبق أرز دافئ مع طحينة خام.</p>
-        </div>
-        <div class="item-card food">
-          <div class="item-header"><span class="item-title">وجبة 3: الغداء المتكامل</span></div>
-          <p class="item-desc">طبق كبير أرز أو مكرونة + بروتين متاح (سمك مشوي، فراخ، كبدة، أو بيض) + حبة بطاطا حلوة مشوية.</p>
-        </div>
-        <div class="item-card food">
-          <div class="item-header"><span class="item-title">وجبة 4: العشاء ودعم الكالسيوم (بدون عيش)</span></div>
-          <p class="item-desc">طبق أرز صغير ببيض مقلي، أو طبق فول بالليمون ومعلقتين كبار طحينة سمراء بالمعلقة (بديل ممتاز لكالسيوم اللبن).</p>
-        </div>
+        <div class="item-card food"><div class="item-header"><span class="item-title">وجبة 1: الإفطار</span></div><p class="item-desc">طبق كبير أرز مصري بالسمن + طبيخ خضار بالشوربة + 3 بيضات مقلية بسمن بلدي أو بروتين.</p></div>
+        <div class="item-card food"><div class="item-header"><span class="item-title">وجبة 2: سناك الظهر</span></div><p class="item-desc">حبتان بطاطا حلوة مهروسة بالسمن البلدي والعسل والسمسم، أو أرز دافئ مع طحينة خام.</p></div>
+        <div class="item-card food"><div class="item-header"><span class="item-title">وجبة 3: الغداء</span></div><p class="item-desc">طبق كبير أرز أو مكرونة + بروتين متاح (سمك مشوي، فراخ، أو بيض) + بطاطا مشوية.</p></div>
+        <div class="item-card food"><div class="item-header"><span class="item-title">وجبة 4: العشاء (بدون عيش)</span></div><p class="item-desc">طبق أرز صغير ببيض مقلي، أو فول بالليمون ومعلقتين كبار طحينة سمراء (بديل الكالسيوم).</p></div>
       </div>
     </div>
   </div>
 
   <script>
-    // Register Service Worker for PWA
+    // 1. توليد ملفات الـ PWA داخلياً (Manifest & Service Worker) لضمان عمل التثبيت
+    const manifestJSON = {
+      name: "نظام إدارة اليوم",
+      short_name: "روتين اليوم",
+      start_url: window.location.href,
+      display: "standalone",
+      background_color: "#0f172a",
+      theme_color: "#0f172a",
+      icons: [{
+        src: "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230f172a'/%3E%3Ccircle cx='256' cy='256' r='180' fill='%231e293b' stroke='%2338bdf8' stroke-width='20'/%3E%3Cpath d='M256 140 V256 L330 300' stroke='%2338bdf8' stroke-width='24' stroke-linecap='round'/%3E%3C/svg%3E",
+        sizes: "512x512", type: "image/svg+xml", purpose: "any maskable"
+      }]
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifestJSON)], {type: 'application/json'});
+    document.getElementById('dynamic-manifest').href = URL.createObjectURL(manifestBlob);
+
+    const swCode = `
+      self.addEventListener('install', (e) => self.skipWaiting());
+      self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
+      self.addEventListener('fetch', (e) => {});
+    `;
+    const swBlob = new Blob([swCode], {type: 'application/javascript'});
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('SW Registered', reg))
-          .catch(err => console.log('SW Error', err));
-      });
+      navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(console.error);
     }
 
+    // 2. منطق التطبيق والجداول
     let currentMode = localStorage.getItem('dayMode') || 'home';
     const isWednesday = (new Date().getDay() === 3);
 
     function initUI() {
-      if (isWednesday) {
-        document.getElementById('wednesdayNotice').style.display = 'block';
-      }
+      if (isWednesday) document.getElementById('wednesdayNotice').style.display = 'block';
       setDayMode(currentMode, false);
     }
 
@@ -273,56 +161,54 @@ const HTML_CONTENT = `<!DOCTYPE html>
     function getActiveSchedule() {
       if (currentMode === 'school') {
         let list = [
-          { time: "04:45", title: "الاستيقاظ النهائي وصلاة الفجر 🕌", desc: "صلاة، شرب ماء وتناول تمرات.", type: "sleep" },
-          { time: "05:30", title: "تمارين الأكتاف والرقبة الصباحية 🧘‍♂️", desc: "Wall Angels + Chin Tucks لتهيئة الظهر لحمل الشنطة.", type: "exercise" },
-          { time: "06:00", title: "الساعة الذهبية (عربي متراكم) 📖", desc: "تصفية درس نحو أو بلاغة متراكم بمخ فايق.", type: "study" },
-          { time: "07:15", title: "فطار الأرز والطبيخ + الخروج 🍚", desc: "أكل وجبة الطاقة وتثبيت الشنطة على الكتفين معاً.", type: "food" },
-          { time: "14:00", title: "العودة وصلاة الظهر + سناك الطاقة 🍠", desc: "أكل سناك البطاطا أو أرز دافئ.", type: "food" },
-          { time: "14:30", title: "Power Nap التعويضية ⏱️", desc: "25 دقيقة نوم فقط بالمنبه لإلغاء إرهاق المدرسة.", type: "sleep" },
-          { time: "15:15", title: "صلاة العصر + تمارين الحوض والعقلة 🏋️", desc: "Glute Bridges لفك قعدة الديسك وعقلة الاستطالة.", type: "exercise" }
+          { time: "04:45", title: "صلاة الفجر 🕌", desc: "صلاة، شرب ماء وتناول تمرات.", type: "sleep" },
+          { time: "05:30", title: "تمارين الأكتاف والرقبة 🧘‍♂️", desc: "Wall Angels + Chin Tucks لتهيئة الظهر.", type: "exercise" },
+          { time: "06:00", title: "عربي متراكم 📖", desc: "تصفية درس نحو أو بلاغة متراكم.", type: "study" },
+          { time: "07:15", title: "فطار الأرز والطبيخ 🍚", desc: "أكل وجبة الطاقة والنزول للمدرسة.", type: "food" },
+          { time: "14:00", title: "العودة + سناك الطاقة 🍠", desc: "أكل سناك البطاطا أو أرز دافئ.", type: "food" },
+          { time: "14:30", title: "Power Nap ⏱️", desc: "25 دقيقة نوم لإلغاء إرهاق المدرسة.", type: "sleep" },
+          { time: "15:15", title: "تمارين الحوض والعقلة 🏋️", desc: "Glute Bridges وعقلة الاستطالة.", type: "exercise" }
         ];
-
         if (isWednesday) {
           list.push(
-            { time: "17:00", title: "التحرك لدرس الإنجليزي في الحصري 🚗", desc: "الدرس من 5:30 حتى 7:30 وإلغاء المذاكرة المسائية.", type: "study" },
-            { time: "20:00", title: "العودة للمنزل + العشاء الكامل 🍳", desc: "تناول وجبة العشاء بدون عيش وراحة تامة من الكتب.", type: "food" },
-            { time: "21:00", title: "النوم المبكر للتعافي 😴", desc: "نوم بدري لتعويض مجهود المشوار والمدرسة.", type: "sleep" }
+            { time: "17:00", title: "درس الإنجليزي في الحصري 🚗", desc: "إلغاء المذاكرة المسائية.", type: "study" },
+            { time: "20:00", title: "العشاء الكامل 🍳", desc: "وجبة العشاء وراحة تامة.", type: "food" },
+            { time: "21:00", title: "النوم المبكر 😴", desc: "نوم بدري لتعويض المجهود.", type: "sleep" }
           );
         } else {
           list.push(
-            { time: "15:45", title: "البلوك 1: التاريخ المتراكم 📚", desc: "محاضرة كاملة سرعة 1.5x وتلخيص الأسهم + 10 أسئلة.", type: "study" },
-            { time: "17:45", title: "صلاة المغرب + الغداء الكامل 🍚", desc: "أرز ومكرونة وبروتين وبطاطا حلوة.", type: "food" },
-            { time: "18:30", title: "البلوك 2: العربي الجديد 📖", desc: "متابعة جزء النحو وتطبيقه المباشر.", type: "study" },
-            { time: "21:00", title: "البلوك 3: تثبيت التاريخ وواجب المدرسة ✍️", desc: "تصفية المهام وإغلاق الكتب.", type: "study" },
-            { time: "22:00", title: "العشاء (بدون عيش) والنوم المتواصل 😴", desc: "أرز وبيض أو فول بالطحينة، ثم نوم متواصل حتى الفجر.", type: "sleep" }
+            { time: "15:45", title: "تاريخ متراكم 📚", desc: "محاضرة كاملة سرعة 1.5x + 10 أسئلة.", type: "study" },
+            { time: "17:45", title: "الغداء الكامل 🍚", desc: "أرز وبروتين وبطاطا حلوة.", type: "food" },
+            { time: "18:30", title: "العربي الجديد 📖", desc: "متابعة النحو وتطبيقه.", type: "study" },
+            { time: "21:00", title: "تثبيت التاريخ ✍️", desc: "تصفية المهام وإغلاق الكتب.", type: "study" },
+            { time: "22:00", title: "العشاء والنوم 😴", desc: "أرز وبيض أو فول بالطحينة.", type: "sleep" }
           );
         }
         return list;
       } else {
         let list = [
-          { time: "04:45", title: "صلاة الفجر والعودة للنوم 🕌", desc: "صلاة الفجر والرجوع للسرير لاستكمال 4 ساعات نوم.", type: "sleep" },
-          { time: "09:30", title: "استيقاظ + تمارين الصباح والرقبة 🧘‍♂️", desc: "Wall Angels + Doorway Stretch + Chin Tucks.", type: "exercise" },
-          { time: "10:00", title: "فطار الأرز والطبيخ والبروتين 🍚", desc: "طبق أرز كبير وطبيخ وبيض أو بروتين لرفع الوزن.", type: "food" },
-          { time: "10:30", title: "البلوك 1: التاريخ الصاروخي 📚", desc: "محاضرة كاملة سرعة 1.5x بالكشكول + حل 10 أسئلة.", type: "study" },
-          { time: "12:30", title: "صلاة الظهر + سناك البطاطا بالسمن والعسل 🍠", desc: "طاقة مكثفة وسريعة الهضم.", type: "food" },
-          { time: "13:15", title: "البلوك 2: العربي الجديد 📖", desc: "سماع وتلخيص قاعدة النحو الأسبوعية وحلها.", type: "study" },
-          { time: "14:45", title: "وجبة الغداء الكاملة 🍗", desc: "أرز كبير وبروتين وخضار مسموح بدون تسبيك حامي.", type: "food" },
-          { time: "15:45", title: "صلاة العصر + Power Nap ⏱️", desc: "20 إلى 25 دقيقة فقط بالمنبه.", type: "sleep" },
-          { time: "16:30", title: "تمارين الحوض وعقلة الاستطالة 🏋️", desc: "علاج بروز المقعدة وتمديد فقرات العمود الفقري.", type: "exercise" }
+          { time: "04:45", title: "صلاة الفجر والنوم 🕌", desc: "صلاة واستكمال 4 ساعات نوم.", type: "sleep" },
+          { time: "09:30", title: "تمارين الصباح والرقبة 🧘‍♂️", desc: "Wall Angels + Chin Tucks.", type: "exercise" },
+          { time: "10:00", title: "فطار الأرز والطبيخ 🍚", desc: "طبق أرز كبير وطبيخ وبروتين.", type: "food" },
+          { time: "10:30", title: "تاريخ متراكم 📚", desc: "محاضرة 1.5x بالكشكول + أسئلة.", type: "study" },
+          { time: "12:30", title: "سناك البطاطا 🍠", desc: "طاقة مكثفة وسريعة الهضم.", type: "food" },
+          { time: "13:15", title: "العربي الجديد 📖", desc: "سماع النحو وحل تطبيقه.", type: "study" },
+          { time: "14:45", title: "الغداء الكامل 🍗", desc: "أرز وبروتين وخضار.", type: "food" },
+          { time: "15:45", title: "Power Nap ⏱️", desc: "20 إلى 25 دقيقة فقط بالمنبه.", type: "sleep" },
+          { time: "16:30", title: "تمارين الحوض والعقلة 🏋️", desc: "علاج بروز المقعدة واستطالة.", type: "exercise" }
         ];
-
         if (isWednesday) {
           list.push(
-            { time: "17:00", title: "التحرك لدرس الإنجليزي في الحصري 🚗", desc: "الدرس من 5:30 م وإلغاء المذاكرة المسائية.", type: "study" },
-            { time: "20:00", title: "العودة للمنزل + العشاء الكامل 🍳", desc: "وجبة العشاء بدون عيش وراحة تامة.", type: "food" },
-            { time: "21:30", title: "النوم المبكر 😴", desc: "نوم عميق لدعم هرمون النمو وصحة الظهر.", type: "sleep" }
+            { time: "17:00", title: "درس الإنجليزي في الحصري 🚗", desc: "إلغاء المذاكرة المسائية.", type: "study" },
+            { time: "20:00", title: "العشاء الكامل 🍳", desc: "وجبة العشاء بدون عيش.", type: "food" },
+            { time: "21:30", title: "النوم المبكر 😴", desc: "نوم لدعم هرمون النمو.", type: "sleep" }
           );
         } else {
           list.push(
-            { time: "17:00", title: "البلوك 3: عربي متراكم ✍️", desc: "ساعة واحدة صافية لدرس قديم وحل تدريبه.", type: "study" },
-            { time: "19:45", title: "البلوك 4: تكملة البلاغة أو حل شامل 📚", desc: "تطبيق شامل بنظام الاستبعاد.", type: "study" },
-            { time: "21:15", title: "وجبة العشاء ودعم الكالسيوم 🍳", desc: "أرز ببيض أو فول بالطحينة بالمعلقة.", type: "food" },
-            { time: "22:30", title: "إطفاء الشاشات والنوم الأول 😴", desc: "نوم هادئ حتى أذان الفجر.", type: "sleep" }
+            { time: "17:00", title: "عربي متراكم ✍️", desc: "ساعة لدرس قديم وحله.", type: "study" },
+            { time: "19:45", title: "تكملة البلاغة 📚", desc: "تطبيق شامل بنظام الاستبعاد.", type: "study" },
+            { time: "21:15", title: "العشاء ودعم الكالسيوم 🍳", desc: "أرز ببيض أو طحينة.", type: "food" },
+            { time: "22:30", title: "النوم الأول 😴", desc: "نوم هادئ حتى الفجر.", type: "sleep" }
           );
         }
         return list;
@@ -331,37 +217,25 @@ const HTML_CONTENT = `<!DOCTYPE html>
 
     function renderSchedule() {
       const container = document.getElementById('scheduleTimeline');
-      const items = getActiveSchedule();
       container.innerHTML = '';
-      items.forEach(item => {
-        const div = document.createElement('div');
-        div.className = `item-card ${item.type}`;
-        div.innerHTML = `
-          <div class="item-header">
-            <span class="item-title">${item.title}</span>
-            <span class="item-time">${item.time}</span>
+      getActiveSchedule().forEach(item => {
+        container.innerHTML += `
+          <div class="item-card ${item.type}">
+            <div class="item-header"><span class="item-title">${item.title}</span><span class="item-time">${item.time}</span></div>
+            <p class="item-desc">${item.desc}</p>
           </div>
-          <p class="item-desc">${item.desc}</p>
         `;
-        container.appendChild(div);
       });
     }
 
     const notifBtn = document.getElementById('enableNotifBtn');
     notifBtn.addEventListener('click', () => {
-      if (!("Notification" in window)) {
-        alert("متصفحك لا يدعم التنبيهات المباشرة.");
-        return;
-      }
+      if (!("Notification" in window)) return alert("متصفحك لا يدعم التنبيهات.");
       Notification.requestPermission().then(perm => {
         if (perm === "granted") {
           notifBtn.textContent = "التنبيه والاهتزاز شغال ✅";
           notifBtn.style.backgroundColor = "var(--accent-green)";
           if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
-          new Notification("تم تفعيل روتين اليوم!", {
-            body: "الموبايل هيهتز ويبعت إشعار عند ميعاد كل بلوك وتمرين.",
-            icon: "/icon.svg"
-          });
         }
       });
     });
@@ -370,20 +244,13 @@ const HTML_CONTENT = `<!DOCTYPE html>
     setInterval(() => {
       if (Notification.permission !== "granted") return;
       const now = new Date();
-      const currentHours = String(now.getHours()).padStart(2, '0');
-      const currentMinutes = String(now.getMinutes()).padStart(2, '0');
-      const timeStr = `${currentHours}:${currentMinutes}`;
-
+      const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      
       if (timeStr !== lastSentMinute) {
-        const schedule = getActiveSchedule();
-        const hit = schedule.find(x => x.time === timeStr);
+        const hit = getActiveSchedule().find(x => x.time === timeStr);
         if (hit) {
           if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-          new Notification(hit.title, {
-            body: hit.desc,
-            icon: "/icon.svg",
-            vibrate: [200, 100, 200]
-          });
+          new Notification(hit.title, { body: hit.desc, vibrate: [200, 100, 200] });
           lastSentMinute = timeStr;
         }
       }
@@ -392,4 +259,4 @@ const HTML_CONTENT = `<!DOCTYPE html>
     initUI();
   </script>
 </body>
-</html>`;
+</html>
