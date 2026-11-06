@@ -1,19 +1,84 @@
-<!DOCTYPE html>
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+
+    // 1. Service Worker File
+    if (url.pathname === "/sw.js") {
+      const swCode = `
+        const CACHE_NAME = 'routine-cache-v1';
+        self.addEventListener('install', (e) => {
+          self.skipWaiting();
+        });
+        self.addEventListener('activate', (e) => {
+          e.waitUntil(clients.claim());
+        });
+        self.addEventListener('fetch', (e) => {
+          e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+        });
+      `;
+      return new Response(swCode, {
+        headers: { "content-type": "application/javascript;charset=utf-8" },
+      });
+    }
+
+    // 2. Web App Manifest
+    if (url.pathname === "/manifest.json") {
+      const manifest = {
+        name: "نظام إدارة اليوم والقوام",
+        short_name: "روتين اليوم",
+        start_url: "/",
+        display: "standalone",
+        background_color: "#0f172a",
+        theme_color: "#0f172a",
+        orientation: "portrait",
+        icons: [
+          {
+            src: "/icon.svg",
+            sizes: "192x192 512x512",
+            type: "image/svg+xml",
+            purpose: "any maskable",
+          },
+        ],
+      };
+      return new Response(JSON.stringify(manifest), {
+        headers: { "content-type": "application/json;charset=utf-8" },
+      });
+    }
+
+    // 3. App Icon (SVG)
+    if (url.pathname === "/icon.svg") {
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+          <rect width="512" height="512" rx="100" fill="#0f172a"/>
+          <circle cx="256" cy="256" r="180" fill="#1e293b" stroke="#38bdf8" stroke-width="20"/>
+          <path d="M256 140 V256 L330 300" stroke="#38bdf8" stroke-width="24" stroke-linecap="round"/>
+        </svg>
+      `;
+      return new Response(svg, {
+        headers: { "content-type": "image/svg+xml" },
+      });
+    }
+
+    // 4. Main HTML Page
+    return new Response(HTML_CONTENT, {
+      headers: { "content-type": "text/html;charset=utf-8" },
+    });
+  },
+};
+
+const HTML_CONTENT = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>نظام اليوم والقوام</title>
   
-  <!-- PWA & Mobile Meta Tags -->
   <meta name="theme-color" content="#0f172a">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="روتين اليوم">
-
-  <!-- Manifest Data URI for Add to Home Screen -->
-  <link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22%D9%86%D8%B8%D8%A7%D9%85%20%D8%A7%D9%84%D9%8A%D9%88%D9%85%20%D9%88%D8%A7%D9%84%D9%82%D9%88%D8%A7%D9%85%22%2C%22short_name%22%3A%22%D8%B1%D9%88%D8%AA%D9%8A%D9%86%D9%8A%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%230f172a%22%7D">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,7 +104,6 @@
     header { text-align: center; margin-bottom: 20px; }
     header h1 { font-size: 1.6rem; font-weight: 800; color: var(--primary); }
 
-    /* Mode Selector Box */
     .status-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -51,92 +115,38 @@
       gap: 10px;
     }
 
-    .selector-group {
-      display: flex;
-      gap: 10px;
-    }
-
+    .selector-group { display: flex; gap: 10px; }
     .selector-btn {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid var(--card-border);
-      background: #0f172a;
-      color: var(--text-muted);
-      border-radius: 8px;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: all 0.2s;
+      flex: 1; padding: 10px; border: 1px solid var(--card-border); background: #0f172a;
+      color: var(--text-muted); border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem;
     }
-
-    .selector-btn.active {
-      background: var(--primary);
-      color: #0f172a;
-      border-color: var(--primary);
-    }
+    .selector-btn.active { background: var(--primary); color: #0f172a; border-color: var(--primary); }
 
     .wednesday-badge {
-      background: rgba(251, 146, 60, 0.15);
-      border: 1px solid var(--accent-orange);
-      color: var(--accent-orange);
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      display: none;
+      background: rgba(251, 146, 60, 0.15); border: 1px solid var(--accent-orange); color: var(--accent-orange);
+      padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; display: none;
     }
 
-    /* Notification Box */
     .notif-box {
-      background: #172554;
-      border: 1px solid var(--primary);
-      border-radius: 10px;
-      padding: 12px 15px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 15px;
+      background: #172554; border: 1px solid var(--primary); border-radius: 10px; padding: 12px 15px;
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;
     }
+    .btn-action { background-color: var(--primary); color: #0f172a; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 700; cursor: pointer; }
 
-    .btn-action {
-      background-color: var(--primary);
-      color: #0f172a;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    /* Tabs */
     .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
     .tab-btn {
-      background-color: var(--card-bg);
-      border: 1px solid var(--card-border);
-      color: var(--text-muted);
-      padding: 10px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      cursor: pointer;
-      text-align: center;
+      background-color: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted);
+      padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; text-align: center;
     }
     .tab-btn.active { background-color: var(--primary); color: #0f172a; border-color: var(--primary); }
 
     .content-panel { display: none; }
     .content-panel.active { display: block; }
 
-    /* Timeline Cards */
     .timeline { display: flex; flex-direction: column; gap: 10px; }
     .item-card {
-      background-color: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-right: 4px solid var(--primary);
-      border-radius: 8px;
-      padding: 12px 15px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
+      background-color: var(--card-bg); border: 1px solid var(--card-border); border-right: 4px solid var(--primary);
+      border-radius: 8px; padding: 12px 15px; display: flex; flex-direction: column; gap: 3px;
     }
     .item-card.study { border-right-color: var(--primary); }
     .item-card.exercise { border-right-color: var(--accent-orange); }
@@ -148,7 +158,6 @@
     .item-time { font-size: 0.8rem; font-weight: 700; color: var(--primary); background: rgba(56, 189, 248, 0.1); padding: 2px 6px; border-radius: 4px; }
     .item-desc { font-size: 0.85rem; color: var(--text-muted); }
 
-    /* Table */
     .custom-table { width: 100%; border-collapse: collapse; background-color: var(--card-bg); border-radius: 8px; overflow: hidden; border: 1px solid var(--card-border); }
     .custom-table th, .custom-table td { padding: 10px; text-align: right; font-size: 0.85rem; border-bottom: 1px solid var(--card-border); }
     .custom-table th { background-color: #172554; color: var(--primary); font-weight: 700; }
@@ -161,7 +170,6 @@
       <h1>نظام إدارة اليوم الذكي</h1>
     </header>
 
-    <!-- State & Settings -->
     <div class="status-card">
       <span style="font-size:0.9rem; font-weight:700;">هل عندك مدرسة النهاردة؟</span>
       <div class="selector-group">
@@ -173,25 +181,21 @@
       </div>
     </div>
 
-    <!-- Notification Bar -->
     <div class="notif-box">
       <span style="font-size: 0.85rem;">🔔 الإشعارات والاهتزاز للمواعيد:</span>
       <button class="btn-action" id="enableNotifBtn">تشغيل التنبيه</button>
     </div>
 
-    <!-- Tabs -->
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab(event, 'tab-schedule')">جدول اليوم الحالي</button>
       <button class="tab-btn" onclick="switchTab(event, 'tab-exercises')">التمارين</button>
       <button class="tab-btn" onclick="switchTab(event, 'tab-diet')">الأكل المخصص</button>
     </div>
 
-    <!-- Schedule Dynamic Container -->
     <div id="tab-schedule" class="content-panel active">
       <div class="timeline" id="scheduleTimeline"></div>
     </div>
 
-    <!-- Exercises Tab -->
     <div id="tab-exercises" class="content-panel">
       <table class="custom-table">
         <thead>
@@ -209,12 +213,11 @@
       </table>
     </div>
 
-    <!-- Diet Tab -->
     <div id="tab-diet" class="content-panel">
       <div class="timeline">
         <div class="item-card food">
           <div class="item-header"><span class="item-title">وجبة 1: الإفطار الأساسي</span></div>
-          <p class="item-desc">طبق كبير أرز مصري بالسمن + طبيخ خضار بالشوربة (بدون شطة أو فلفل) + 3 بيضات مقلية بسمن بلدي أو قطعة بروتين.</p>
+          <p class="item-desc">طبق كبير أرز مصري بالسمن + طبيخ خضار بالشوربة (بدون شطة أو فلفل) + 3 بيضات مقلية بسمن بلدي أو بروتين متاح.</p>
         </div>
         <div class="item-card food">
           <div class="item-header"><span class="item-title">وجبة 2: سناك الظهر عالي السعرات</span></div>
@@ -233,7 +236,15 @@
   </div>
 
   <script>
-    // State Management
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW Registered', reg))
+          .catch(err => console.log('SW Error', err));
+      });
+    }
+
     let currentMode = localStorage.getItem('dayMode') || 'home';
     const isWednesday = (new Date().getDay() === 3);
 
@@ -247,10 +258,8 @@
     function setDayMode(mode, save = true) {
       currentMode = mode;
       if (save) localStorage.setItem('dayMode', mode);
-
       document.getElementById('btnModeSchool').classList.toggle('active', mode === 'school');
       document.getElementById('btnModeHome').classList.toggle('active', mode === 'home');
-
       renderSchedule();
     }
 
@@ -261,7 +270,6 @@
       e.currentTarget.classList.add('active');
     }
 
-    // Schedule Generators
     function getActiveSchedule() {
       if (currentMode === 'school') {
         let list = [
@@ -291,7 +299,6 @@
         }
         return list;
       } else {
-        // Home Day
         let list = [
           { time: "04:45", title: "صلاة الفجر والعودة للنوم 🕌", desc: "صلاة الفجر والرجوع للسرير لاستكمال 4 ساعات نوم.", type: "sleep" },
           { time: "09:30", title: "استيقاظ + تمارين الصباح والرقبة 🧘‍♂️", desc: "Wall Angels + Doorway Stretch + Chin Tucks.", type: "exercise" },
@@ -326,7 +333,6 @@
       const container = document.getElementById('scheduleTimeline');
       const items = getActiveSchedule();
       container.innerHTML = '';
-
       items.forEach(item => {
         const div = document.createElement('div');
         div.className = `item-card ${item.type}`;
@@ -341,11 +347,10 @@
       });
     }
 
-    // Notification & Vibration
     const notifBtn = document.getElementById('enableNotifBtn');
     notifBtn.addEventListener('click', () => {
       if (!("Notification" in window)) {
-        alert("متصفحك الحالي لا يدعم التنبيهات المباشرة.");
+        alert("متصفحك لا يدعم التنبيهات المباشرة.");
         return;
       }
       Notification.requestPermission().then(perm => {
@@ -355,7 +360,7 @@
           if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
           new Notification("تم تفعيل روتين اليوم!", {
             body: "الموبايل هيهتز ويبعت إشعار عند ميعاد كل بلوك وتمرين.",
-            icon: "https://cdn-icons-png.flaticon.com/512/1827/1827349.png"
+            icon: "/icon.svg"
           });
         }
       });
@@ -364,7 +369,6 @@
     let lastSentMinute = "";
     setInterval(() => {
       if (Notification.permission !== "granted") return;
-
       const now = new Date();
       const currentHours = String(now.getHours()).padStart(2, '0');
       const currentMinutes = String(now.getMinutes()).padStart(2, '0');
@@ -374,13 +378,10 @@
         const schedule = getActiveSchedule();
         const hit = schedule.find(x => x.time === timeStr);
         if (hit) {
-          // Trigger Vibration (200ms on, 100ms off, 200ms on)
-          if ("vibrate" in navigator) {
-            navigator.vibrate([200, 100, 200]);
-          }
+          if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
           new Notification(hit.title, {
             body: hit.desc,
-            icon: "https://cdn-icons-png.flaticon.com/512/1827/1827349.png",
+            icon: "/icon.svg",
             vibrate: [200, 100, 200]
           });
           lastSentMinute = timeStr;
@@ -391,4 +392,4 @@
     initUI();
   </script>
 </body>
-</html>
+</html>`;
