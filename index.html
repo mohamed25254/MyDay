@@ -1,0 +1,635 @@
+1. بخصوص الإشعارات والهوست (مهم جداً تقنياً)
+ * لو فتحت الملف كملف محلي (file:///...) مباشرة من مدير الملفات:
+   المتصفحات الحديثة (زي Chrome على الأندرويد والكمبيوتر) بتمنع تشغيل الـ Notification API عبر بروتوكول file:// لأسباب أمنية؛ لازم الصفحة تشتغل عبر بروتوكول HTTPS أو localhost.
+ * هل لازم تدفع فلوس أو تعمل خادم معقد؟
+   لأ نهائياً، الحل مجاني وفي ثانية واحدة:
+   * أسهل حل (Host مجاني في 30 ثانية): ارفع الملف على GitHub Pages أو Netlify Drop أو Vercel — مجرد سحب وإفلات للملف هيديك رابط [https://your-name.netlify.app](https://your-name.netlify.app) تفتحه من موبايلك ويشتغل إشعارات فوراً.
+   * على الكمبيوتر محلياً: تقدر تشغله بـ Live Server على VS Code أو أي سيرفر محلي (http://localhost:3000) وبيشتغل عليه الإشعار تمام.
+2. كود الـ HTML المتكامل والمعدّل بالكامل (index.html)
+تم تعديل النظام بالكامل:
+ * حذف اللبن والشوفان والعيش والزبادي.
+ * الاعتماد على الأرز والطبيخ والبطاطا المهروسة بالسمن والعسل، والطحينة الغنية بالكالسيوم.
+ * تحديث جميع التنبيهات والأوقات والقوائم.
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة اليوم والقوام - ثانية بكالوريا</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --accent-green: #34d399;
+      --accent-orange: #fb923c;
+      --accent-purple: #c084fc;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      padding: 20px 15px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 5px;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Notification Banner */
+    .notif-box {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .notif-box span {
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+
+    .btn-notif {
+      background-color: var(--primary);
+      color: #0f172a;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-notif:hover {
+      background-color: var(--primary-hover);
+      color: #fff;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    @media (min-width: 600px) {
+      .tabs {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .tab-btn {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 12px 10px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .tab-btn.active {
+      background-color: var(--primary);
+      color: #0f172a;
+      border-color: var(--primary);
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3);
+    }
+
+    /* Content Area */
+    .content-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .content-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Schedule List / Cards */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .item-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-right: 4px solid var(--primary);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .item-card.study { border-right-color: var(--primary); }
+    .item-card.exercise { border-right-color: var(--accent-orange); }
+    .item-card.food { border-right-color: var(--accent-green); }
+    .item-card.sleep { border-right-color: var(--accent-purple); }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text-main);
+    }
+
+    .item-time {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary);
+      background-color: rgba(56, 189, 248, 0.1);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .item-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .badge-alert {
+      margin-top: 15px;
+      background: rgba(251, 146, 60, 0.1);
+      border: 1px solid var(--accent-orange);
+      padding: 12px;
+      border-radius: 8px;
+      color: var(--accent-orange);
+      font-size: 0.9rem;
+    }
+
+    .custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background-color: var(--card-bg);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+    }
+
+    .custom-table th, .custom-table td {
+      padding: 12px 14px;
+      text-align: right;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .custom-table th {
+      background-color: #172554;
+      color: var(--primary);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>نظام اليوم والقوام الذكي</h1>
+      <p>جدول المذاكرة، التمارين التصحيحية، والتغذية المخصصة (بدون عيش/لبن)</p>
+    </header>
+
+    <!-- Notification Bar -->
+    <div class="notif-box">
+      <span>🔔 <strong>تفعيل التنبيهات:</strong> اضغط لتشغيل الإشعارات التلقائية لكل بلوك ووجبة.</span>
+      <button class="btn-notif" id="enableNotifBtn">تشغيل الإشعارات</button>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab(event, 'non-school')">أيام بدون مدرسة</button>
+      <button class="tab-btn" onclick="switchTab(event, 'school')">أيام المدرسة</button>
+      <button class="tab-btn" onclick="switchTab(event, 'exercises')">جدول التمارين</button>
+      <button class="tab-btn" onclick="switchTab(event, 'diet')">جدول الأكل</button>
+    </div>
+
+    <!-- TAB 1: NON-SCHOOL DAYS -->
+    <div id="non-school" class="content-panel active">
+      <div class="timeline">
+        <div class="item-card sleep">
+          <div class="item-header">
+            <span class="item-title">صلاة الفجر والعودة للنوم</span>
+            <span class="item-time">04:45 ص - 09:30 ص</span>
+          </div>
+          <p class="item-desc">صلاة الفجر وشرب ماء، ثم استكمال النوم العميق (4 ساعات إضافية).</p>
+        </div>
+
+        <div class="item-card exercise">
+          <div class="item-header">
+            <span class="item-title">استيقاظ + تمارين الصباح (الأكتاف، الأتب، والرقبة)</span>
+            <span class="item-time">09:30 ص - 10:00 ص</span>
+          </div>
+          <p class="item-desc">غسل الوجه بمياه باردة + Wall Angels + Doorway Stretch + Chin Tucks للرقبة.</p>
+        </div>
+
+        <div class="item-card food">
+          <div class="item-header">
+            <span class="item-title">وجبة الإفطار الأساسية (الأرز والطبيخ)</span>
+            <span class="item-time">10:00 ص - 10:30 ص</span>
+          </div>
+          <p class="item-desc">طبق كبير أرز مصري بالسمن/الشعرية + طبق طبيخ خضار بالشوربة وطماطم طبيعية + بيض مقلي بسمن بلدي أو قطعة بروتين متاحة.</p>
+        </div>
+
+        <div class="item-card study">
+          <div class="item-header">
+            <span class="item-title">البلوك 1: التاريخ الصاروخي المتراكم</span>
+            <span class="item-time">10:30 ص - 12:30 م</span>
+          </div>
+          <p class="item-desc">محاضرة كاملة سرعة 1.5x + تدوين مخططات الأسهم بالكشكول + حل 10 أسئلة.</p>
+        </div>
+
+        <div class="item-card food">
+          <div class="item-header">
+            <span class="item-title">صلاة الظهر + سناك السعرات السريعة</span>
+            <span class="item-time">12:30 م - 01:15 م</span>
+          </div>
+          <p class="item-desc">صلاة الظهر + حبة بطاطا حلوة مهروسة بالسمن البلدي والعسل الأسود والسمسم (أو طبق أرز دافئ مع طحينة خام).</p>
+        </div>
+
+        <div class="item-card study">
+          <div class="item-header">
+            <span class="item-title">البلوك 2: العربي (المحاضرة الجديدة)</span>
+            <span class="item-time">01:15 م - 02:45 م</span>
+          </div>
+          <p class="item-desc">سماع جزء النحو فقط وتفريغ شروطه في ورقة واحدة وحل تدريبه المباشر.</p>
+        </div>
+
+        <div class="item-card food">
+          <div class="item-header">
+            <span class="item-title">وجبة الغداء الكاملة</span>
+            <span class="item-time">02:45 م - 03:45 م</span>
+          </div>
+          <p class="item-desc">طبق أرز كبير أو مكرونة + بروتين (سمك مشوي / فراخ / تونة / كبدة / بيض) + خيار أو خس.</p>
+        </div>
+
+        <div class="item-card sleep">
+          <div class="item-header">
+            <span class="item-title">صلاة العصر + الـ Power Nap</span>
+            <span class="item-time">03:45 م - 04:30 م</span>
+          </div>
+          <p class="item-desc">قيلولة 20 إلى 25 دقيقة فقط بالمنبه لإنعاش التركيز بدون نوم عميق.</p>
+        </div>
+
+        <div class="item-card exercise">
+          <div class="item-header">
+            <span class="item-title">تمارين الحوض والمؤخرة وعقلة الاستطالة</span>
+            <span class="item-time">04:30 م - 05:00 م</span>
+          </div>
+          <p class="item-desc">Glute Bridges لعصر الحوض + Kneeling Hip Flexor + تعليق عقلة 40 ثانية لفرد القامة.</p>
+        </div>
+
+        <div class="item-card study">
+          <div class="item-header">
+            <span class="item-title">البلوك 3: تصفية عربي متراكم</span>
+            <span class="item-time">05:00 م - 06:15 م</span>
+          </div>
+          <p class="item-desc">ساعة واحدة صافية لدرس قديم من الـ 6 المتراكمين وحل تدريبه.</p>
+        </div>
+
+        <div class="item-card study">
+          <div class="item-header">
+            <span class="item-title">البلوك 4: تكملة البلاغة أو حل شامل</span>
+            <span class="item-time">07:45 م - 09:15 م</span>
+          </div>
+          <p class="item-desc">إكمال جزء المحاضرة الأسبوعية أو حل 20 سؤال شاملين بنظام الاستبعاد.</p>
+        </div>
+
+        <div class="item-card food">
+          <div class="item-header">
+            <span class="item-title">وجبة العشاء (بدون عيش)</span>
+            <span class="item-time">09:15 م - 10:30 م</span>
+          </div>
+          <p class="item-desc">طبق أرز صغير دافئ مع بيض مقلي بسمن بلدي، أو طبق فول بالليمون ومعلقتين كبار طحينة بالمعلقة (كالسيوم ممتاز للعظام).</p>
+        </div>
+
+        <div class="item-card sleep">
+          <div class="item-header">
+            <span class="item-title">النوم الليلي الأول</span>
+            <span class="item-time">11:00 م - 04:45 ص</span>
+          </div>
+          <p class="item-desc">إطفاء الشاشات والنوم العميق لتحفيز هرمون النمو (HGH).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: SCHOOL DAYS -->
+    <div id="school" class="content-panel">
+      <div class="timeline">
+        <div class="item-card sleep">
+          <div class="item-header">
+            <span class="item-title">الاستيقاظ النهائي + صلاة الفجر</span>
+            <span class="item-time">04:45 ص - 05:30 ص</span>
+          </div>
+          <p class="item-desc">وضوء وصلاة، شرب ماء وتناول 3 تمرات.</p>
+        </div>
+
+        <div class="item-card exercise">
+          <div class="item-header">
+            <span class="item-title">تمارين الأكتاف والرقبة الصباحية</span>
+            <span class="item-time">05:30 ص - 06:00 ص</span>
+          </div>
+          <p class="item-desc">فك عضلات الصدر وأعلى الظهر وChin Tucks لتهيئة الظهر لحمل الشنطة.</p>
+        </div>
+
+        <div class="item-card study">
+          <div class="item-header">
+            <span class="item-title">الساعة الذهبية (عربي متراكم)</span>
+            <span class="item-time">06:00 ص - 07:15 ص</span>
+          </div>
+          <p class="item-desc">تصفية قاعدة نحو أو بلاغة متراكمة بذهن صافٍ تماماً قبل الخروج للمدرسة.</p>
+        </div>
+
+        <div class="item-card food">
+          <div class="item-header">
+            <span class="item-title">فطار الأرز والطبيخ + النزول للمدرسة</span>
+            <span class="item-time">07:15 ص - 08:00 ص</span>
+          </div>
+          <p class="item-desc">أرز وطبيخ دافئ لضمان الطاقة، وحمل الشنطة على الكتفين معاً.</p>
+        </div>
+
+        <div class="item-card sleep">
+          <div class="item-header">
+            <span class="item-title">العودة + صلاة الظهر + Power Nap تعويضية</span>
+            <span class="item-time">02:00 م - 03:15 م</span>
+          </div>
+          <p class="item-desc">أكل سناك بطاطا حلوة أو طبق أرز صغير + نوم 25 دقيقة فقط بالمنبه لمسح تعب المدرسة.</p>
+        </div>
+
+        <div class="item-card exercise">
+          <div class="item-header">
+            <span class="item-title">صلاة العصر + تمارين الحوض والعقلة</span>
+            <span class="item-time">03:15 م - 03:45 م</span>
+          </div>
+          <p class="item-desc">Glute Bridges لفك قعدة الديسك وعصر المؤخرة + تعليق عقلة 40 ثانية.</p>
+        </div>
+
+        <div class="item-card study">
+          <div class="item-header">
+            <span class="item-title">البلوك 1: التاريخ الصاروخي المتراكم</span>
+            <span class="item-time">03:45 م - 05:45 م</span>
+          </div>
+          <p class="item-desc">محاضرة كاملة سرعة 1.5x وتفريغ بالكشكول + حل 10 أسئلة.</p>
+        </div>
+
+        <div class="item-card food">
+          <div class="item-header">
+            <span class="item-title">صلاة المغرب + وجبة الغداء الكاملة</span>
+            <span class="item-time">05:45 م - 06:30 م</span>
+          </div>
+          <p class="item-desc">طبق كبير أرز أو مكرونة + بروتين + حبة بطاطا حلوة مشوية.</p>
+        </div>
+
+        <div class="item-card study">
+          <div class="item-header">
+            <span class="item-title">البلوك 2: العربي (المحاضرة الجديدة)</span>
+            <span class="item-time">06:30 م - 08:00 م</span>
+          </div>
+          <p class="item-desc">متابعة الجزء الأسبوعي وتطبيقه المباشر.</p>
+        </div>
+
+        <div class="item-card study">
+          <div class="item-header">
+            <span class="item-title">البلوك 3: حل واجب المدرسة وتثبيت التاريخ</span>
+            <span class="item-time">09:00 م - 10:00 م</span>
+          </div>
+          <p class="item-desc">إنهاء المهام السريعة وإغلاق الكتب.</p>
+        </div>
+
+        <div class="item-card sleep">
+          <div class="item-header">
+            <span class="item-title">العشاء (أرز وبيض أو فول بالطحينة) + النوم</span>
+            <span class="item-time">10:00 م - 10:30 م</span>
+          </div>
+          <p class="item-desc">نوم متواصل 6.5 ساعات من 10:30 م حتى الفجر.</p>
+        </div>
+      </div>
+
+      <div class="badge-alert">
+        ⚡ <strong>استثناء يوم الأربعاء (درس الإنجليزي في الحصري):</strong> النزول 5:00 م والعودة 8:00 م. يتم إلغاء بلوك المذاكرة المسائي بالكامل وتناول العشاء والنوم مباشرة لتجنب الإرهاق.
+      </div>
+    </div>
+
+    <!-- TAB 3: EXERCISES -->
+    <div id="exercises" class="content-panel">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>التمرين</th>
+            <th>الهدف والمشكلة</th>
+            <th>المجموعات والعدات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Doorway Stretch</strong></td>
+            <td>فتح الصدر وعلاج دوران الأكتاف للأمام</td>
+            <td>3 جولات × 30 ثانية ثبات</td>
+          </tr>
+          <tr>
+            <td><strong>Wall Angels</strong></td>
+            <td>فرد تقوس أعلى الظهر (الأتب)</td>
+            <td>3 جولات × 10 - 12 عدة ببطء ملاصق للجدار</td>
+          </tr>
+          <tr>
+            <td><strong>Prone Y-to-W</strong></td>
+            <td>علاج تجنح لوح الكتف وتثبيت العضلات</td>
+            <td>3 جولات × 10 عدات (Y ثم سحب W وعصر ثانيتين)</td>
+          </tr>
+          <tr>
+            <td><strong>Chin Tucks</strong></td>
+            <td>علاج بروز الرقبة للأمام ورجوعها لمكانها</td>
+            <td>مجموعتان × 10 عدات (سحب الذقن للخلف 5 ثوانٍ)</td>
+          </tr>
+          <tr>
+            <td><strong>Kneeling Hip Flexor</strong></td>
+            <td>فك شد الحوض لعلاج بروز المؤخرة</td>
+            <td>3 جولات × 30 ثانية لكل رجل في وضع الاندفاع</td>
+          </tr>
+          <tr>
+            <td><strong>Glute Bridges</strong></td>
+            <td>تثبيت الحوض وتقوية عضلات المقعدة</td>
+            <td>3 جولات × 12 عدة مع عصر الحوض بالأعلى</td>
+          </tr>
+          <tr>
+            <td><strong>تعليق العقلة (Decompression)</strong></td>
+            <td>فك انضغاط الفقرات وتحفيز استطالة القامة</td>
+            <td>جولتان × 30 إلى 45 ثانية تعلق حر بارتخاء كامل</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TAB 4: DIET -->
+    <div id="diet" class="content-panel">
+      <div class="timeline">
+        <div class="item-card food">
+          <div class="item-header">
+            <span class="item-title">وجبة 1: الإفطار الأساسي (الأرز والطبيخ)</span>
+          </div>
+          <p class="item-desc">طبق كبير أرز مصري بالشعرية أو بالسمن البلدي + طبق طبيخ خضار بالشوربة (كوسة، بامية، ملوخية، فاصوليا خضراء، قلقاس — بطماطم طبيعية وبدون فلفل وشطة) + 3 بيضات مقلية بسمن بلدي أو قطعة بروتين متاحة.</p>
+        </div>
+
+        <div class="item-card food">
+          <div class="item-header">
+            <span class="item-title">وجبة 2: سناك السعرات المكثف (بديل الشيك)</span>
+          </div>
+          <p class="item-desc">حبة أو حبتان بطاطا حلوة مشوية ومهروسة مع معلقة كبيرة سمن بلدي ومعلقتين عسل أسود ورشة سمسم (450 سعرة نظيفة وسريعة) أو طبق أرز دافئ مع طحينة خام.</p>
+        </div>
+
+        <div class="item-card food">
+          <div class="item-header">
+            <span class="item-title">وجبة 3: الغداء المتوازن</span>
+          </div>
+          <p class="item-desc">طبق أرز كبير أو مكرونة + بروتين متاح (سمك مشوي، فراخ، كبدة، تونة، أو بيض) + حبة بطاطا حلوة مشوية.</p>
+        </div>
+
+        <div class="item-card food">
+          <div class="item-header">
+            <span class="item-title">سناك المغرب</span>
+          </div>
+          <p class="item-desc">كبشة فول سوداني مقشر + 5 تمرات.</p>
+        </div>
+
+        <div class="item-card food">
+          <div class="item-header">
+            <span class="item-title">وجبة 4: العشاء ودعم الكالسيوم (بدون عيش)</span>
+          </div>
+          <p class="item-desc">طبق أرز صغير مع بيض مسلوق/مقلي، أو طبق فول بالليمون ومعلقتين كبار طحينة سمراء (تؤكل بالمعلقة مباشرة، فالطحينة والسمسم بديل فائق للكالسيوم لبناء العظام بدلاً من اللبن والزبادي) + معلقة عسل أسود.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Tab Switching
+    function switchTab(e, tabId) {
+      document.querySelectorAll('.content-panel').forEach(panel => {
+        panel.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      document.getElementById(tabId).classList.add('active');
+      e.currentTarget.classList.add('active');
+    }
+
+    // Schedule Alerts Array (24H Format)
+    const scheduleAlerts = [
+      { time: "04:45", title: "صلاة الفجر 🕌", body: "استيقظ لصلاة الفجر واشرب كوب ماء كبير." },
+      { time: "09:30", title: "تمارين الصباح 🧘‍♂️", body: "حان وقت تمارين الأكتاف وفرد الأتب والرقبة (15 دقيقة)." },
+      { time: "10:00", title: "فطار الأرز والطبيخ 🍚", body: "جهّز وجبة الفطار الغنية بالأرز والطبيخ والبروتين." },
+      { time: "10:30", title: "بلوك التاريخ المتراكم 📚", body: "شغّل المحاضرة على 1.5x وركز في كشكول الأسهم." },
+      { time: "12:30", title: "سناك الظهر والبطاطا 🍠", body: "صلاة الظهر وسناك البطاطا المهروسة بالسمن والعسل." },
+      { time: "13:15", title: "بلوك العربي الجديد 📖", body: "سماع وتطبيق جزء النحو من المحاضرة الجديدة." },
+      { time: "15:45", title: "صلاة العصر والباور ناب ⏱️", body: "قيلولة 25 دقيقة فقط بالمنبه لإنعاش الطاقة." },
+      { time: "16:30", title: "تمارين الحوض والعقلة 🏋️", body: "تمارين علاج بروز الحوض والمؤخرة وعقلة الاستطالة." },
+      { time: "17:00", title: "بلوك عربي متراكم ✍️", body: "ساعة واحدة لقاعدة قديمة وحل تدريبها." },
+      { time: "21:15", title: "العشاء وبديل الكالسيوم 🍳", body: "وجبة العشاء (أرز ببيض أو فول بالطحينة الكثيفة بدون عيش)." },
+      { time: "22:30", title: "إطفاء الشاشات والنوم 😴", body: "استعد للنوم العميق لتحفيز هرمون النمو وفرد القامة." }
+    ];
+
+    // Notification Logic
+    const notifBtn = document.getElementById('enableNotifBtn');
+
+    notifBtn.addEventListener('click', () => {
+      if (!("Notification" in window)) {
+        alert("متصفحك لا يدعم نظام الإشعارات.");
+        return;
+      }
+
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          notifBtn.textContent = "الإشعارات مفعلة ✅";
+          notifBtn.style.backgroundColor = "var(--accent-green)";
+          new Notification("تم تفعيل نظام اليوم بنجاح!", {
+            body: "ستصلك التنبيهات في مواعيد المذاكرة، التمارين، وسناك الطاقة.",
+            icon: "https://cdn-icons-png.flaticon.com/512/1827/1827349.png"
+          });
+        } else {
+          alert("تم رفض إذن الإشعارات، يمكنك السماح به من إعدادات المتصفح.");
+        }
+      });
+    });
+
+    // Background Interval Checker
+    let lastNotifiedTime = "";
+    setInterval(() => {
+      if (Notification.permission !== "granted") return;
+
+      const now = new Date();
+      const currentHours = String(now.getHours()).padStart(2, '0');
+      const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+      const currentTimeString = `${currentHours}:${currentMinutes}`;
+
+      if (currentTimeString !== lastNotifiedTime) {
+        const match = scheduleAlerts.find(item => item.time === currentTimeString);
+        if (match) {
+          new Notification(match.title, {
+            body: match.body,
+            icon: "https://cdn-icons-png.flaticon.com/512/1827/1827349.png"
+          });
+          lastNotifiedTime = currentTimeString;
+        }
+      }
+    }, 30000);
+  </script>
+</body>
+</html>
+
